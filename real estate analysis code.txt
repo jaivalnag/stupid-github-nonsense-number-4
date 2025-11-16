@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Estate DCF Underwriting Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#059669', // Emerald 600
+                        'secondary': '#10b981', // Emerald 500
+                        'dark-bg': '#1f2937', // Gray 800
+                        'light-text': '#f3f4f6', // Gray 100
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f3f4f6; /* Light gray background */
+            font-family: 'Inter', sans-serif;
+        }
+        .card {
+            background-color: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 2rem;
+        }
+        input[type="number"], select {
+            border: 1px solid #d1d5db; /* Gray 300 */
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            width: 100%;
+            transition: all 0.15s ease-in-out;
+        }
+        input[type="number"]:focus, select:focus {
+            border-color: #059669; /* Primary color */
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.3);
+        }
+        .metric-box {
+            background-color: #e5e7eb; /* Gray 200 */
+            border-radius: 0.75rem;
+            padding: 1rem;
+            text-align: center;
+        }
+        .metric-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #059669;
+        }
+        .sensitivity-table td, .sensitivity-table th {
+            padding: 0.75rem;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+        }
+        .sensitivity-table th {
+            font-weight: 600;
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-extrabold text-gray-900 mb-6 border-b pb-3">
+            ✨ Value-Add Multifamily DCF Underwriting Tool
+        </h1>
+        <p class="mb-8 text-gray-600">
+            Enter the inputs for your target property to generate the key financial feasibility metrics (IRR, NPV, EM, CoC, Yield).
+        </p>
+
+        <div id="app" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Inputs Column (Col 1 & 2) -->
+            <div class="lg:col-span-2 space-y-8">
+                
+                <!-- Project & Timeline Inputs -->
+                <div class="card">
+                    <h2 class="text-2xl font-semibold text-primary mb-4">1. Project & Core Assumptions</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label class="block">
+                            <span class="text-gray-700">Hold Period (Years)</span>
+                            <input type="number" id="holdPeriod" value="5" min="1" oninput="calculateDCF()">
+                        </label>
+                        <label class="block">
+                            <span class="text-gray-700">Target Discount Rate (%)</span>
+                            <input type="number" id="discountRate" value="8.5" min="0" step="0.1" oninput="calculateDCF()">
+                        </label>
+                        <label class="block">
+                            <span class="text-gray-700">Exit Cap Rate (%)</span>
+                            <input type="number" id="exitCapRate" value="5.75" min="0" step="0.01" oninput="calculateDCF()">
+                        </label>
+                        <label class="block">
+                            <span class="text-gray-700">Total Units / SF</span>
+                            <input type="number" id="unitsSqft" value="100" min="1" oninput="calculateDCF()">
+                            <p class="text-xs text-gray-500 mt-1">Units (e.g., 100) or SqFt (e.g., 85000)</p>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Costs & Financing Inputs -->
+                <div class="card">
+                    <h2 class="text-2xl font-semibold text-primary mb-4">2. Costs & Financing (Year 0 Outflow)</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <label class="block">
+                            <span class="text-gray-700">Acquisition Price ($)</span>
+                            <input type="number" id="acqPrice" value="12000000" min="0" oninput="calculateDCF()">
+                        </label>
+                        <label class="block">
+                            <span class="text-gray-700">Hard Costs ($)</span>
+                            <input type="number" id="hardCosts" value="6800000" min="0" oninput="calculateDCF()">
+                        </label>
+                        <label class="block">
+                            <span class="text-gray-700">Soft Costs ($)</span>
+                            <input type="number" id="softCosts" value="1200000" min="0" oninput="calculateDCF()">
+                        </label>
+                        
+                        <label class="block">
+                            <span class="text-gray-700">Loan-to-Cost (LTC) (%)</span>
+                            <input type="number" id="ltcRatio" value="65" min="0" max="100" step="1" oninput="calculateDCF()">
+                        </label>
+                        <label class="block">
+                            <span class="text-gray-700">Interest Rate (%)</span>
+                            <input type="number" id="interestRate" value="6.5" min="0" step="0.1" oninput="calculateDCF()">
+                        </label>
+                        <label class="block">
+                            <span class="text-gray-700">Amortization (Years)</span>
+                            <input type="number" id="amortPeriod" value="30" min="1" oninput="calculateDCF()">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Income & Expense Inputs -->
+                <div class="card">
+                    <h2 class="text-2xl font-semibold text-primary mb-4">3. Income & Expense Projections</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <label class="block">
+                            <span class="text-gray-700">Initial Rent ($/Unit/Month)</span>
+                            <input type="number" id="initialRent" value="1800" min="0" oninput="calculateDCF()">
+                        </label>
+                        <label class="block">
+                            <span class="text-gray-700">Rent Growth (%)</span>
+                            <input type="number" id="rentGrowth" value="3.0" min="0" step="0.1" oninput="calculateDCF()">
+                        </label>
+                        <label class="block">
+                            <span class="text-gray-700">Vacancy & Loss (%)</span>
+                            <input type="number" id="vacancyRate" value="5.0" min="0" max="100" step="0.1" oninput="calculateDCF()">
+                        </label>
+                         <label class="block">
+                            <span class="text-gray-700">Selling Costs (%)</span>
+                            <input type="number" id="sellingCosts" value="2.0" min="0" max="100" step="0.1" oninput="calculateDCF()">
+                        </label>
+                        
+                        <label class="block">
+                            <span class="text-gray-700">Initial OpEx ($/Unit/Month)</span>
+                            <input type="number" id="initialOpEx" value="552.50" min="0" oninput="calculateDCF()">
+                            <p class="text-xs text-gray-500 mt-1">Based on assumed $/SF/Year</p>
+                        </label>
+                        <label class="block">
+                            <span class="text-gray-700">OpEx Growth (%)</span>
+                            <input type="number" id="opexGrowth" value="3.5" min="0" step="0.1" oninput="calculateDCF()">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Outputs Column (Col 3) -->
+            <div class="space-y-8">
+                <div class="card bg-primary/10 border border-primary/30">
+                    <h2 class="text-2xl font-bold text-primary mb-6">Executive Summary Metrics</h2>
+                    <div id="outputs" class="space-y-4">
+                        <!-- Output metrics will be rendered here -->
+                        <div class="metric-box">
+                            <p class="text-sm font-medium text-gray-600">Initial Equity Investment</p>
+                            <p id="initialEquity" class="metric-value text-gray-900"></p>
+                        </div>
+                        <div class="metric-box">
+                            <p class="text-sm font-medium text-gray-600">Internal Rate of Return (IRR)</p>
+                            <p id="irrOutput" class="metric-value"></p>
+                        </div>
+                        <div class="metric-box">
+                            <p class="text-sm font-medium text-gray-600">Net Present Value (NPV)</p>
+                            <p id="npvOutput" class="metric-value"></p>
+                        </div>
+                        <div class="metric-box">
+                            <p class="text-sm font-medium text-gray-600">Equity Multiple (EM)</p>
+                            <p id="emOutput" class="metric-value"></p>
+                        </div>
+                        <div class="metric-box">
+                            <p class="text-sm font-medium text-gray-600">Avg. Cash-on-Cash Return</p>
+                            <p id="cocOutput" class="metric-value"></p>
+                        </div>
+                        <div class="metric-box">
+                            <p class="text-sm font-medium text-gray-600">Stabilized Development Yield</p>
+                            <p id="yieldOutput" class="metric-value"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DCF Table Output -->
+        <div class="card mt-8">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">4. Projected Cash Flow Waterfall (Levered)</h2>
+            <div class="overflow-x-auto">
+                <table id="dcfTable" class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <!-- Table headers will be populated by JS -->
+                    </thead>
+                    <tbody>
+                        <!-- Table rows will be populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sensitivity Analysis Output -->
+        <div class="card mt-8">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">5. Sensitivity Analysis (IRR %)</h2>
+            <p class="text-gray-600 mb-4">Stress test the project's IRR by adjusting the Exit Cap Rate and Vacancy/Loss assumption.</p>
+            <div id="sensitivityMatrixContainer" class="overflow-x-auto">
+                <!-- Sensitivity Matrix will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Financial Functions (IRR, NPV, PMT) ---
+
+        // Simple Payment (PMT) function for annual debt service
+        // P = Principal, r = annual rate, n = total number of payments
+        function PMT(rate, nper, pv) {
+            const r = rate / 12; // Monthly rate
+            const n = nper * 12; // Total months
+            if (r === 0) return pv / n;
+            const pmt = r * pv * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+            return pmt * 12; // Annual payment
+        }
+
+        // Future Value (FV) of a loan balance
+        function FV(rate, nper, pmt, pv) {
+            const r = rate / 12;
+            const n = nper * 12;
+            let fv = pv * Math.pow(1 + r, n);
+            fv += pmt / r * (Math.pow(1 + r, n) - 1);
+            return -fv;
+        }
+
+        // NPV function for annual cash flows
+        function NPV(rate, values) {
+            let npv = 0;
+            for (let t = 1; t < values.length; t++) {
+                npv += values[t] / Math.pow(1 + rate, t);
+            }
+            // Add the Year 0 cash flow (which is already present value)
+            npv += values[0];
+            return npv;
+        }
+
+        // IRR function using a simple iterative approximation (Newton-Raphson is more accurate but complex)
+        function IRR(values, guess) {
+            guess = guess || 0.1;
+            const maxIterations = 100;
+            const tolerance = 0.00001;
+            let rate = guess;
+
+            for (let i = 0; i < maxIterations; i++) {
+                let npv = 0;
+                let npvPrime = 0;
+
+                for (let t = 0; t < values.length; t++) {
+                    npv += values[t] / Math.pow(1 + rate, t);
+                    npvPrime -= t * values[t] / Math.pow(1 + rate, t + 1);
+                }
+
+                if (Math.abs(npv) < tolerance) {
+                    return rate;
+                }
+
+                rate = rate - npv / npvPrime;
+            }
+            return NaN;
+        }
+
+        // --- Formatting Helpers ---
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                maximumFractionDigits: 0
+            }).format(value);
+        }
+
+        function formatPercentage(value) {
+            // Check for NaN or Infinity before formatting
+            if (isNaN(value) || !isFinite(value)) {
+                return 'N/A';
+            }
+            return new Intl.NumberFormat('en-US', {
+                style: 'percent',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(value / 100);
+        }
+
+        // --- Core DCF Calculation Logic (Reusable for Sensitivity) ---
+
+        /**
+         * Runs the full DCF calculation for a given set of inputs and returns the IRR.
+         * @param {Object} inputs - All primary input parameters.
+         * @param {number} customExitCapRate - Optional scenario Cap Rate (as decimal).
+         * @param {number} customVacancyRate - Optional scenario Vacancy Rate (as decimal).
+         * @returns {number} The calculated IRR as a percentage (e.g., 15.00).
+         */
+        function runDCF_IRR_Only(inputs, customExitCapRate, customVacancyRate) {
+            const scenarioInputs = { ...inputs };
+
+            if (customExitCapRate !== undefined) {
+                scenarioInputs.exitCapRate = customExitCapRate;
+            }
+            if (customVacancyRate !== undefined) {
+                scenarioInputs.vacancyRate = customVacancyRate;
+            }
+
+            const totalProjectCost = scenarioInputs.acqPrice + scenarioInputs.hardCosts + scenarioInputs.softCosts;
+            const loanAmount = totalProjectCost * scenarioInputs.ltcRatio;
+            const initialEquity = totalProjectCost - loanAmount;
+
+            if (initialEquity <= 0) return NaN;
+
+            const cashFlowSeries = [-initialEquity];
+            
+            let currentPGI = scenarioInputs.initialRent * scenarioInputs.unitsSqft * 12;
+            let currentOpEx = scenarioInputs.initialOpEx * 12;
+            const annualDebtService = PMT(scenarioInputs.interestRate, scenarioInputs.amortPeriod, loanAmount);
+
+            for (let year = 1; year <= scenarioInputs.holdPeriod; year++) {
+                if (year > 1) {
+                    currentPGI *= (1 + scenarioInputs.rentGrowth);
+                    currentOpEx *= (1 + scenarioInputs.opexGrowth);
+                }
+                
+                const egi = currentPGI * (1 - scenarioInputs.vacancyRate);
+                const noi = egi - currentOpEx;
+                const cfbt = noi - annualDebtService;
+
+                cashFlowSeries.push(cfbt);
+            }
+
+            // SALE/REVERSION (Year N)
+            const yearOfSale = scenarioInputs.holdPeriod;
+            const nextYearNOI = cashFlowSeries[yearOfSale] + annualDebtService; 
+            
+            if (scenarioInputs.exitCapRate === 0) return NaN;
+
+            const grossSalesPrice = nextYearNOI / scenarioInputs.exitCapRate;
+            const totalSellingCosts = grossSalesPrice * scenarioInputs.sellingCosts;
+            const remainingLoanBalance = Math.abs(FV(scenarioInputs.interestRate, yearOfSale, -annualDebtService/12, loanAmount));
+            const netSaleProceeds = grossSalesPrice - totalSellingCosts - remainingLoanBalance;
+
+            // Final Cash Flow
+            cashFlowSeries[yearOfSale] += netSaleProceeds;
+
+            return IRR(cashFlowSeries, scenarioInputs.discountRate) * 100;
+        }
+
+        // --- Main Controller Function ---
+
+        function calculateDCF() {
+            // 1. INPUT GATHERING
+            const inputs = {
+                holdPeriod: parseInt(document.getElementById('holdPeriod').value),
+                discountRate: parseFloat(document.getElementById('discountRate').value) / 100,
+                exitCapRate: parseFloat(document.getElementById('exitCapRate').value) / 100,
+                unitsSqft: parseFloat(document.getElementById('unitsSqft').value),
+                acqPrice: parseFloat(document.getElementById('acqPrice').value),
+                hardCosts: parseFloat(document.getElementById('hardCosts').value),
+                softCosts: parseFloat(document.getElementById('softCosts').value),
+                ltcRatio: parseFloat(document.getElementById('ltcRatio').value) / 100,
+                interestRate: parseFloat(document.getElementById('interestRate').value) / 100,
+                amortPeriod: parseInt(document.getElementById('amortPeriod').value),
+                initialRent: parseFloat(document.getElementById('initialRent').value),
+                rentGrowth: parseFloat(document.getElementById('rentGrowth').value) / 100,
+                vacancyRate: parseFloat(document.getElementById('vacancyRate').value) / 100,
+                initialOpEx: parseFloat(document.getElementById('initialOpEx').value),
+                opexGrowth: parseFloat(document.getElementById('opexGrowth').value) / 100,
+                sellingCosts: parseFloat(document.getElementById('sellingCosts').value) / 100,
+            };
+
+            // Input validation
+            if (Object.values(inputs).some(isNaN) || inputs.holdPeriod < 1 || inputs.unitsSqft <= 0) {
+                const outputs = ['irrOutput', 'npvOutput', 'emOutput', 'cocOutput', 'yieldOutput', 'initialEquity'];
+                outputs.forEach(id => document.getElementById(id).textContent = '---');
+                document.getElementById('dcfTable').innerHTML = '';
+                document.getElementById('sensitivityMatrixContainer').innerHTML = '';
+                return;
+            }
+
+            // 2. MAIN DCF RUN (for display metrics)
+            const totalProjectCost = inputs.acqPrice + inputs.hardCosts + inputs.softCosts;
+            const loanAmount = totalProjectCost * inputs.ltcRatio;
+            const initialEquity = totalProjectCost - loanAmount;
+
+            document.getElementById('initialEquity').textContent = formatCurrency(initialEquity);
+
+            const cashFlowSeries = [-initialEquity];
+            let totalEquityInflows = 0;
+            let totalCashOnCash = 0;
+            
+            let currentPGI = inputs.initialRent * inputs.unitsSqft * 12;
+            let currentOpEx = inputs.initialOpEx * 12;
+            const annualDebtService = PMT(inputs.interestRate, inputs.amortPeriod, loanAmount);
+
+            for (let year = 1; year <= inputs.holdPeriod; year++) {
+                if (year > 1) {
+                    currentPGI *= (1 + inputs.rentGrowth);
+                    currentOpEx *= (1 + inputs.opexGrowth);
+                }
+                
+                const egi = currentPGI * (1 - inputs.vacancyRate);
+                const noi = egi - currentOpEx;
+                const cfbt = noi - annualDebtService;
+
+                cashFlowSeries.push(cfbt);
+                totalCashOnCash += cfbt;
+            }
+
+            // SALE/REVERSION (Year N)
+            const yearOfSale = inputs.holdPeriod;
+            const nextYearNOI = cashFlowSeries[yearOfSale] + annualDebtService; // Unlevered NOI for year N
+            
+            const grossSalesPrice = nextYearNOI / inputs.exitCapRate;
+            const totalSellingCosts = grossSalesPrice * inputs.sellingCosts;
+            const remainingLoanBalance = Math.abs(FV(inputs.interestRate, yearOfSale, -annualDebtService/12, loanAmount));
+            const netSaleProceeds = grossSalesPrice - totalSellingCosts - remainingLoanBalance;
+
+            // Final Cash Flow in Year N
+            cashFlowSeries[yearOfSale] += netSaleProceeds;
+            totalEquityInflows = cashFlowSeries.slice(1).reduce((sum, cf) => sum + (cf > 0 ? cf : 0), 0);
+            
+            
+            // 3. FINAL PERFORMANCE METRICS (KPIs)
+
+            const irr = IRR(cashFlowSeries, inputs.discountRate) * 100;
+            document.getElementById('irrOutput').textContent = formatPercentage(irr);
+
+            const npv = NPV(inputs.discountRate, cashFlowSeries);
+            document.getElementById('npvOutput').textContent = formatCurrency(npv);
+
+            const equityMultiple = totalEquityInflows / initialEquity;
+            document.getElementById('emOutput').textContent = equityMultiple.toFixed(2) + 'x';
+            
+            const operatingCFYears = inputs.holdPeriod > 1 ? inputs.holdPeriod - 1 : inputs.holdPeriod;
+            // Calculate CoC only on operating years, excluding the large sale year
+            const totalOperatingCF = totalCashOnCash - (cashFlowSeries[yearOfSale] - netSaleProceeds);
+            const avgCoc = totalOperatingCF / operatingCFYears / initialEquity * 100;
+            document.getElementById('cocOutput').textContent = formatPercentage(avgCoc);
+            
+            const stabilizedNOI = cashFlowSeries[1] + annualDebtService; 
+            const devYield = stabilizedNOI / totalProjectCost * 100;
+            document.getElementById('yieldOutput').textContent = formatPercentage(devYield);
+            
+            // 4. RENDER DCF TABLE & SENSITIVITY
+            renderDCFTable(inputs, cashFlowSeries, annualDebtService, totalProjectCost, initialEquity, loanAmount, remainingLoanBalance, grossSalesPrice, totalSellingCosts, netSaleProceeds);
+            calculateSensitivityMatrix(inputs);
+        }
+
+        function renderDCFTable(inputs, cashFlowSeries, annualDebtService, totalProjectCost, initialEquity, loanAmount, remainingLoanBalance, grossSalesPrice, totalSellingCosts, netSaleProceeds) {
+            const table = document.getElementById('dcfTable');
+            table.innerHTML = ''; // Clear existing content
+            
+            const years = Array.from({ length: inputs.holdPeriod }, (_, i) => i + 1);
+
+            // Header Row
+            let theadHtml = `
+                <tr class="bg-gray-100 text-left text-sm font-semibold text-gray-700">
+                    <th class="py-3 px-2">Metric</th>
+                    ${years.map(y => `<th class="py-3 px-2 text-right">Year ${y}</th>`).join('')}
+                    <th class="py-3 px-2 text-right">Totals</th>
+                </tr>
+            `;
+            table.innerHTML = `<thead>${theadHtml}</thead><tbody></tbody>`;
+
+            const tbody = table.querySelector('tbody');
+            
+            // DCF Breakdown
+            const tableData = {
+                'PGI (Potential Gross Income)': [],
+                'EGI (Effective Gross Income)': [],
+                'OpEx (Operating Expenses)': [],
+                'NOI (Net Operating Income)': [],
+                'Debt Service': [],
+                'CFBT (Levered Cash Flow)': [],
+                'Final Sale Proceeds': [],
+                'TOTAL CASH FLOW': [],
+            };
+
+            let currentPGI = inputs.initialRent * inputs.unitsSqft * 12;
+            let currentOpEx = inputs.initialOpEx * 12;
+            let cumulativeCF = 0;
+
+            for (let y = 0; y < inputs.holdPeriod; y++) {
+                if (y > 0) {
+                    currentPGI *= (1 + inputs.rentGrowth);
+                    currentOpEx *= (1 + inputs.opexGrowth);
+                }
+                const egi = currentPGI * (1 - inputs.vacancyRate);
+                const noi = egi - currentOpEx;
+                const cfbt = noi - annualDebtService;
+
+                tableData['PGI (Potential Gross Income)'].push(currentPGI);
+                tableData['EGI (Effective Gross Income)'].push(egi);
+                tableData['OpEx (Operating Expenses)'].push(currentOpEx);
+                tableData['NOI (Net Operating Income)'].push(noi);
+                tableData['Debt Service'].push(-annualDebtService);
+                tableData['CFBT (Levered Cash Flow)'].push(cfbt);
+                tableData['Final Sale Proceeds'].push(y === inputs.holdPeriod - 1 ? netSaleProceeds : 0);
+                tableData['TOTAL CASH FLOW'].push(cashFlowSeries[y + 1]);
+
+                cumulativeCF += cashFlowSeries[y + 1];
+            }
+            
+            // Add Initial Investment Row (Year 0 only)
+            const initialRow = document.createElement('tr');
+            initialRow.className = 'border-b border-gray-100 bg-red-50 font-bold text-red-700';
+            initialRow.innerHTML = `<td class="py-2 px-2">Initial Equity (Year 0)</td>` + 
+                `<td class="py-2 px-2 text-right">(${formatCurrency(initialEquity)})</td>` +
+                years.slice(1).map(() => `<td class="py-2 px-2 text-right"></td>`).join('') +
+                `<td class="py-2 px-2 text-right"></td>`; // Empty for total
+
+            tbody.appendChild(initialRow);
+
+
+            // Render all rows
+            Object.keys(tableData).forEach(key => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-100 hover:bg-gray-50';
+                
+                if (key === 'TOTAL CASH FLOW') {
+                    row.className = 'border-b border-gray-100 bg-primary/20 font-bold';
+                }
+
+                row.innerHTML = `<td class="py-2 px-2 text-gray-700">${key}</td>` +
+                    tableData[key].map((value, index) => {
+                        const isSaleYear = key === 'TOTAL CASH FLOW' && index === inputs.holdPeriod - 1;
+                        const cellClass = isSaleYear ? 'bg-secondary/30 font-extrabold' : 'text-gray-900';
+                        return `<td class="py-2 px-2 text-right ${cellClass}">${formatCurrency(value)}</td>`;
+                    }).join('');
+                
+                // Add the totals column (simple sum for now)
+                if (key === 'TOTAL CASH FLOW') {
+                     row.innerHTML += `<td class="py-2 px-2 text-right font-bold text-lg">${formatCurrency(cumulativeCF)}</td>`;
+                } else {
+                     row.innerHTML += `<td class="py-2 px-2 text-right"></td>`;
+                }
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        function calculateSensitivityMatrix(inputs) {
+            const baseCap = inputs.exitCapRate;
+            const baseVac = inputs.vacancyRate;
+
+            // Define ranges for Sensitivity
+            const capRateScenarios = [
+                baseCap - 0.005, // Base - 50 bps
+                baseCap,         // Base Case
+                baseCap + 0.005  // Base + 50 bps
+            ];
+
+            const vacancyScenarios = [
+                baseVac - 0.01,  // Base - 100 bps
+                baseVac,         // Base Case
+                baseVac + 0.01   // Base + 100 bps
+            ];
+
+            const matrix = [];
+
+            // Calculate IRR for each scenario
+            vacancyScenarios.forEach(vac => {
+                const row = [];
+                capRateScenarios.forEach(cap => {
+                    const irr = runDCF_IRR_Only(inputs, cap, vac);
+                    row.push(irr);
+                });
+                matrix.push(row);
+            });
+
+            renderSensitivityMatrix(matrix, capRateScenarios, vacancyScenarios, baseCap, baseVac);
+        }
+
+        function renderSensitivityMatrix(matrix, capRateScenarios, vacancyScenarios, baseCap, baseVac) {
+            const container = document.getElementById('sensitivityMatrixContainer');
+            if (matrix.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">Could not generate sensitivity matrix.</p>';
+                return;
+            }
+
+            let html = '<table class="sensitivity-table w-full">';
+            
+            // Header Row (Cap Rates)
+            html += '<thead><tr><th class="bg-gray-200">Vacancy Rate (Y-Axis) / Exit Cap Rate (X-Axis)</th>';
+            capRateScenarios.forEach(cap => {
+                const isBase = cap === baseCap;
+                html += `<th class="${isBase ? 'bg-secondary/50 font-extrabold text-gray-900' : 'bg-gray-200'}">${formatPercentage(cap * 100)}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            // Data Rows (Vacancy Rates and IRRs)
+            vacancyScenarios.forEach((vac, i) => {
+                const isBaseRow = vac === baseVac;
+                html += `<tr><th class="${isBaseRow ? 'bg-secondary/30 font-extrabold text-gray-900' : 'bg-gray-200'}">${formatPercentage(vac * 100)}</th>`;
+                
+                matrix[i].forEach((irr, j) => {
+                    const isBaseCell = isBaseRow && (capRateScenarios[j] === baseCap);
+                    let cellClass = 'text-gray-900';
+                    if (isBaseCell) {
+                        cellClass = 'bg-secondary/70 text-white font-extrabold shadow-md';
+                    } else if (irr < 0) {
+                        cellClass = 'text-red-600 bg-red-100';
+                    }
+                    
+                    html += `<td class="${cellClass}">${formatPercentage(irr)}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+
+        // Run calculation on load with default values
+        window.onload = () => {
+             calculateDCF();
+        }
+
+    </script>
+</body>
+</html>
